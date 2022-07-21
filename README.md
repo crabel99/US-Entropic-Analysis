@@ -172,6 +172,7 @@ print(c)
 
 ## References
 * Banerjee, A., & Yakovenko, V. M. (2010). Universal patterns of inequality. New Journal of Physics, 12, 1-25. doi:10.1088/1367-2630/12/7/075032
+* Callen, H. B. (1985). Thermodynamics and an Introduction to Thermostatistics (2nd ed.). New York: John Wiley & Sons.
 * Energy Information Agency (2022). Open Data. https://www.eia.gov/opendata/index.php.
 * Federal Reserve Bank of St. Louis. (2022). FRED Economic Data API. https://fred.stlouisfed.org/docs/api/fred/. 
 * Internal Revenue Service (2022). SOI Tax Stats - Individual Statistical Tables by Size of Adjusted Gross Income. https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income.
