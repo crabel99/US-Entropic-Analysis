@@ -150,7 +150,7 @@ data_poly$lambda <- log(data_poly$lambda)
 fit_poly <- lm(lambda ~ M, data_poly)
 print(summary(fit_poly))
 
-C <- fit_poly$coefficients[1]
+C <- exp(fit_poly$coefficients[1])
 names(C) <- "C"
 n <- -fit_poly$coefficients[2]
 names(n) <- "n"

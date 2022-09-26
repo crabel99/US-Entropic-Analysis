@@ -125,7 +125,7 @@ We can define the economic temperature, $T$, as
 $$
 \begin{align}
   \tag{3}
-  T = P T^\star. \label{eq:3}
+  T = P\, T^\star. \label{eq:3}
 \end{align}
 $$
 
@@ -268,7 +268,7 @@ with the proportionality constant and the polytropic index,
 print(C)
 print(n)
 #        C 
-# 6.518995 
+# 677.8968 
 #        n 
 # 1.125394 
 ```
