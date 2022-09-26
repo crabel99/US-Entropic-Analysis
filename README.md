@@ -8,7 +8,7 @@ The data set comprises income data from 1996-2019.
 
 The model data comes from three different sources.
 
-1. Internal Revenue Service [Income Tax Data ](https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income)
+1. Internal Revenue Service [Income Tax Data](https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income)
 2. Energy Information Agency [Open Data API](https://api.eia.gov/)
 3. Federal Reserve Bank of St. Louis [FRED API](https://api.stlouisfed.org/fred/)
 
@@ -19,6 +19,7 @@ the IRS data, the downloaded `*.xls` files have already been parsed into suitabl
 ## Using the Model
 
 ### Setup
+
 The model is developed using [`R-Studio`](https://www.rstudio.com/products/rstudio/download/) and can be installed from that link.
 Once `R-Studio` is installed you will need to install the necessary `CRAN` libraries.
 
@@ -50,8 +51,8 @@ Their derivation uses the Gibbs distribution as the basis of the thermal portion
 $$
  \begin{align}
    \tag{1}
-   f(u;T,u_0,\alpha) = \frac{e^{- \frac{u_0}{T} \arctan{\frac{u}{u_0}}}}{Z 
-   \left(1 + \left( \frac{u}{u_0} \right)^2 \right)^\alpha}. \label{eq:1}
+   f(\bar{e};T^\star,\bar{e}_0,\alpha) = \frac{e^{- \frac{\bar{e}_0}{T^\star} \arctan{\frac{\bar{e}}{\bar{e}_0}}}}{Z
+   \left(1 + \left( \frac{\bar{e}}{\bar{e}_0} \right)^2 \right)^\alpha}. \label{eq:1}
  \end{align}
 $$
 
@@ -104,76 +105,170 @@ Once configured, the R script can be run from the console using,
 source("src/aggregate_data.R")
 ```
 
-This model takes the marginal utility of money, $\lambda$, and converts the units of the economic temperature, $T_{fit}$, equation $\eqref{eq:1}$, from dollars to energy, $GJ$.
+#### Equation of State
 
+This model does a two step regression to evaluate the parameters of the model,
 $$
 \begin{align}
   \tag{2}
-  T = \lambda T_{fit}. \label{eq:2}
+  \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\bar{m}}{\bar{m}_0}\right]. \label{eq:2}
 \end{align}
 $$
+Where the regression coefficients are: initial utility $\bar{s}_0$, the return to scale of money $R$, and the value capacity of the individual $c$.
+The dependent variable is the utility $\bar{s}$ and the independent variables are the per capita exergy input $\bar{e}$ and the average income $\bar{m}$ and their associated initial values $\bar{e}_0$ and $\bar{m}_0$ respectively.
+This model is a slight adaptation of Callen's (1985, p. 68) equation 3.38 which is the equation of state for an ideal gas.
 
-Next the model computes the mean income,
-
+We can define the economic temperature, $T$, as
 $$
 \begin{align}
   \tag{3}
-  \langle m \rangle = \frac{M}{N} = \frac{\sum_j M_j}{\sum_j N_j}. \label{eq:3}
+  T = P T^\star. \label{eq:3}
 \end{align}
 $$
+Where $P$ is the value of money and $T^\star$ is a regression parameter of equation $\eqref{eq:1}$.
 
-Where $M$ is the total income of the ensemble, and $N$ is the total number of people in the ensemble.
-
-The script then uses the built in `R` linear model `lm` to fit the following equation,
+The first regression considers the relationship
 $$
 \begin{align}
   \tag{4}
-  s = s_0 + cR \log\left(\frac{T}{T_0}\right) + R \log\left(\frac{\langle m \rangle}{\langle m_0 \rangle}\right). \label{eq:4}
+  P\,\bar{m} = R\,T, \label{eq:4}
 \end{align}
 $$
-This model is a slight adaptation of Callen's (1985, p. 68) equation 3.38 which is the equation of state for an ideal gas.
+which we can rewrite as $\bar{m} = R\,T^\star$.
+This results in $R=1.23$ and a fit summary of,
 
-Where the ensemble's modeled entropy, $s$, is computed from the appropriate distribution, e.g. equation $\eqref{eq:1}$, $T_0 = 2\,815.8 \left[GJ\right]$, and $\langle m_0 \rangle = 37\,689 \left[\$/person\right]$.
+```bash
+Call:
+lm(formula = M ~ 0 + T, data = data_input)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-8730.5 -2005.2   340.7  1781.0  4603.6 
+
+Coefficients:
+  Estimate Std. Error t value Pr(>|t|)    
+T  1.23011    0.01304   94.32   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 2990 on 23 degrees of freedom
+Multiple R-squared:  0.9974, Adjusted R-squared:  0.9973 
+F-statistic:  8896 on 1 and 23 DF,  p-value: < 2.2e-16
+```
+
+With the plot of the output
+![m-T* Plot](plots/m-T*.jpg)
+
+The next step is to model the relationship between utility, $\bar{s}$, and the per capita exergy input, $\bar{e}$.
+To do this we define a new independent parameter $\bar{s}^\prime$,
+
+$$
+\begin{align}
+  \tag{5}
+  \bar{s}^\prime = \bar{s} - R \log\frac{\bar{m}}{\bar{m}_0} = \bar{s}_0 + c\,R \log \frac{\bar{e}}{\bar{e}_0}. \label{eq:5}
+\end{align}
+$$
+
+Where the ensemble's remaining entropy, $\bar{s}^\prime$, is computed from the appropriate distribution, e.g. equation $\eqref{eq:5}$, $\bar{e}_0 = 392.1858 \left[GJ\right]$, and $\bar{m}_0 = 37.689 \left[k\$/person\right]$.
 
 When the package is run, it will provide an output something like
 
 ``` bash
 Call:
-lm(formula = S ~ T + M, data = train)
+lm(formula = S ~ U, data = data_input)
 
 Residuals:
-      Min        1Q    Median        3Q       Max 
--0.051839 -0.018045 -0.002761  0.014310  0.075569 
+     Min       1Q   Median       3Q      Max 
+-0.10421 -0.03564  0.01247  0.02651  0.15374 
 
 Coefficients:
             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) 11.52009    0.01575 731.298  < 2e-16 ***
-T            0.13336    0.03577   3.728  0.00183 ** 
-M            0.85757    0.04188  20.474 6.66e-13 ***
+(Intercept) 11.46101    0.02229 514.067  < 2e-16 ***
+U            1.04863    0.17461   6.006 4.81e-06 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 0.0314 on 16 degrees of freedom
-Multiple R-squared:  0.9679,	Adjusted R-squared:  0.9639 
-F-statistic: 241.1 on 2 and 16 DF,  p-value: 1.131e-12
+Residual standard error: 0.05948 on 22 degrees of freedom
+Multiple R-squared:  0.6211, Adjusted R-squared:  0.6039 
+F-statistic: 36.07 on 1 and 22 DF,  p-value: 4.81e-06
 ```
 
-The parameters $R$ and $c$ can be recovered by running,
+The parameters $R$, $c$, and $\bar{s}_0$ are
 
 ``` R
-R <- fit$coefficients[3]
-c <- fit$coefficients[2] / R
 print(R)
 print(c)
+print(s_0)
 
-# 0.8575689
-# 0.1555147
+#        R
+# 1.230111
+#         c
+# 0.8524645
+#      s_0
+# 11.46101
 ```
 
+With the plot of the output
+![s*-u Plot](plots/s*-u.jpg)
+
+The three remaining economic parameters are calculated using the following relationships:
+
+1. $T$: $\bar{e} = c\,R\,T$
+2. $P$: Equation $\eqref{eq:3}$
+3. $\mu$:  $\mu = T\left[(c + 1) R - \bar{s}\right]$
+
+#### The Economic Path - A Polytropic Process
+
+Looking at the relationship between $P$ and $\bar{m}$ we can model the expansion in nominal wages a polytropic process,
+$$
+\begin{align}
+  \tag{6}
+  \log P = \log C - n \log \bar{m}. \label{eq:6}
+\end{align}
+$$
+The regression used $\bar{m}$ with units of $k\$/person$, resulting in an output of,
+
+``` bash
+Call:
+lm(formula = lambda ~ M, data = data_poly)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.12745 -0.04080 -0.01343  0.02691  0.11535 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  6.51900    0.26834   24.29  < 2e-16 ***
+M           -1.12539    0.06669  -16.88 4.49e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.06174 on 22 degrees of freedom
+Multiple R-squared:  0.9283, Adjusted R-squared:  0.925 
+F-statistic: 284.8 on 1 and 22 DF,  p-value: 4.486e-14
+```
+
+with the proportionality constant and the polytropic index,
+
+```R
+print(C)
+print(n)
+#        C 
+# 6.518995 
+#        n 
+# 1.125394 
+```
+
+With the plot of the output
+![P-m Plot](plots/lambda-m.jpg)
+
+With these relationships, we can fully describe the system and evaluate changes in policy that effect the regression parameters, the regression inputs,  and/or the thermodynamic path (monetary and energy policy).
+
 ## References
+
 * Banerjee, A., & Yakovenko, V. M. (2010). Universal patterns of inequality. New Journal of Physics, 12, 1-25. doi:10.1088/1367-2630/12/7/075032
 * Callen, H. B. (1985). Thermodynamics and an Introduction to Thermostatistics (2nd ed.). New York: John Wiley & Sons.
-* Energy Information Agency (2022). Open Data. https://www.eia.gov/opendata/index.php.
-* Federal Reserve Bank of St. Louis. (2022). FRED Economic Data API. https://fred.stlouisfed.org/docs/api/fred/. 
-* Internal Revenue Service (2022). SOI Tax Stats - Individual Statistical Tables by Size of Adjusted Gross Income. https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income.
+* Energy Information Agency (2022). Open Data. <https://www.eia.gov/opendata/index.php>.
+* Federal Reserve Bank of St. Louis. (2022). FRED Economic Data API. <https://fred.stlouisfed.org/docs/api/fred/>.
+* Internal Revenue Service (2022). SOI Tax Stats - Individual Statistical Tables by Size of Adjusted Gross Income. <https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income>.
 * Lawrence Livermore National Laboratory (2022). Estimated U.S. Energy Consumption in 2021. [LLNL-MI-410527](https://flowcharts.llnl.gov/sites/flowcharts/files/2022-04/Energy_2021_United-States_0.png).

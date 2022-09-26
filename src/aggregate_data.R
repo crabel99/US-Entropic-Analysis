@@ -97,8 +97,11 @@ print(summary(fit))
 # Generate remaining intensive parameters and collect everything into one
 # dataframe
 R <- fit_m_T$coefficients[1]
+names(R) <- "R"
 c <- fit$coefficients[2]/fit_m_T$coefficients[1]
+names(c) <- "c"
 s_0 <- fit$coefficients[1]
+names(s_0) <- "s_0"
 specEcon <- econParameters
 specEcon$M <- specEcon$M / specEcon$N / 1000
 specEcon$U <- specEcon$U / specEcon$N
@@ -139,14 +142,20 @@ ggsave("plots/deflators.jpg",
 
 # Polytropic Analysis
 gamma <- 1 + R / c
+names(gamma) <- "gamma"
 data_poly <- specEcon %>% subset(select = c(M, N, lambda))
-data_poly$M <- log(data_poly$M/data_poly$M[1])
-data_poly$lambda <- log(data_poly$lambda/data_poly$lambda[1])
+data_poly$M <- log(data_poly$M)
+data_poly$lambda <- log(data_poly$lambda)
 
 fit_poly <- lm(lambda ~ M, data_poly)
 print(summary(fit_poly))
 
-K <- (-fit_poly$coefficients[2] - gamma) / (1 - gamma)
+C <- fit_poly$coefficients[1]
+names(C) <- "C"
+n <- -fit_poly$coefficients[2]
+names(n) <- "n"
+K <- (n - gamma) / (1 - gamma)
+names(K) <- "K"
 specEcon$lambda.fit <- specEcon$lambda[1] * exp(fit_poly$fitted.values)
 Const <- specEcon$lambda.fit[1]*specEcon$M[1]^(-fit_poly$coefficients[2])
 del_w <- Const / (1 + fit_poly$coefficients[2]) *
