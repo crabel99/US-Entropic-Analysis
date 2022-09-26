@@ -223,7 +223,11 @@ The three remaining economic parameters are calculated using the following relat
 2. $P$: Equation $\eqref{eq:3}$
 3. $\mu$:  $\mu = T\left[(c + 1) R - \bar{s}\right]$
 
-To see all of the ensemble's parameters run `View(specEcon)`.
+To see all of the ensemble's parameters run,
+
+```R
+View(specEcon)
+```
 
 #### The Economic Path - A Polytropic Process
 
@@ -236,7 +240,7 @@ $$
 \end{align}
 $$
 
-The regression used $\bar{m}$ with units of $k\$/person$, resulting in an output of,
+The regression used $\bar{m}$ with units of $[k$\$ $/person]$, resulting in an output of,
 
 ``` bash
 Call:
