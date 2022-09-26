@@ -156,7 +156,7 @@ n <- -fit_poly$coefficients[2]
 names(n) <- "n"
 K <- (n - gamma) / (1 - gamma)
 names(K) <- "K"
-specEcon$lambda.fit <- specEcon$lambda[1] * exp(fit_poly$fitted.values)
+specEcon$lambda.fit <- exp(fit_poly$fitted.values)
 Const <- specEcon$lambda.fit[1]*specEcon$M[1]^(-fit_poly$coefficients[2])
 del_w <- Const / (1 + fit_poly$coefficients[2]) *
   (specEcon$M[24]^(1 + fit_poly$coefficients[2]) -
@@ -275,4 +275,6 @@ print(plot_index)
 
 # Move plots to paper directory
 flist <- list.files("plots", "^.+[.]pdf$", full.names = TRUE)
-file.copy(flist, "../../Papers/Quantum\ Foundations\ of\ Utility/plots",overwrite = TRUE)
+file.copy(flist,
+          "../../Papers/Quantum\ Foundations\ of\ Utility/images",
+          overwrite = TRUE)

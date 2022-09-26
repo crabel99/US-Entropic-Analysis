@@ -217,6 +217,8 @@ The three remaining economic parameters are calculated using the following relat
 2. $P$: Equation $\eqref{eq:3}$
 3. $\mu$:  $\mu = T\left[(c + 1) R - \bar{s}\right]$
 
+To see all of the ensemble's parameters run `View(specEcon)`.
+
 #### The Economic Path - A Polytropic Process
 
 Looking at the relationship between $P$ and $\bar{m}$ we can model the expansion in nominal wages a polytropic process,
