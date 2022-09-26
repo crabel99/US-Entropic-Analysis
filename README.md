@@ -108,32 +108,38 @@ source("src/aggregate_data.R")
 #### Equation of State
 
 This model does a two step regression to evaluate the parameters of the model,
+
 $$
 \begin{align}
   \tag{2}
   \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\bar{m}}{\bar{m}_0}\right]. \label{eq:2}
 \end{align}
 $$
+
 Where the regression coefficients are: initial utility $\bar{s}_0$, the return to scale of money $R$, and the value capacity of the individual $c$.
 The dependent variable is the utility $\bar{s}$ and the independent variables are the per capita exergy input $\bar{e}$ and the average income $\bar{m}$ and their associated initial values $\bar{e}_0$ and $\bar{m}_0$ respectively.
 This model is a slight adaptation of Callen's (1985, p. 68) equation 3.38 which is the equation of state for an ideal gas.
 
 We can define the economic temperature, $T$, as
+
 $$
 \begin{align}
   \tag{3}
   T = P T^\star. \label{eq:3}
 \end{align}
 $$
+
 Where $P$ is the value of money and $T^\star$ is a regression parameter of equation $\eqref{eq:1}$.
 
 The first regression considers the relationship
+
 $$
 \begin{align}
   \tag{4}
   P\,\bar{m} = R\,T, \label{eq:4}
 \end{align}
 $$
+
 which we can rewrite as $\bar{m} = R\,T^\star$.
 This results in $R=1.23$ and a fit summary of,
 
@@ -169,7 +175,7 @@ $$
 \end{align}
 $$
 
-Where the ensemble's remaining entropy, $\bar{s}^\prime$, is computed from the appropriate distribution, e.g. equation $\eqref{eq:5}$, $\bar{e}_0 = 392.1858 \left[GJ\right]$, and $\bar{m}_0 = 37.689 \left[k\$/person\right]$.
+Where the ensemble's remaining entropy, $\bar{s}^\prime$, is computed from the appropriate distribution, e.g. equation $\eqref{eq:5}$, $\bar{e}_0 = 392.1858 \left[GJ\right]$, and $\bar{m}_0 = 37.689 [k$\$ $/person]$.
 
 When the package is run, it will provide an output something like
 
@@ -222,12 +228,14 @@ To see all of the ensemble's parameters run `View(specEcon)`.
 #### The Economic Path - A Polytropic Process
 
 Looking at the relationship between $P$ and $\bar{m}$ we can model the expansion in nominal wages a polytropic process,
+
 $$
 \begin{align}
   \tag{6}
   \log P = \log C - n \log \bar{m}. \label{eq:6}
 \end{align}
 $$
+
 The regression used $\bar{m}$ with units of $k\$/person$, resulting in an output of,
 
 ``` bash
