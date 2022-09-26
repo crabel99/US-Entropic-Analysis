@@ -275,6 +275,6 @@ print(plot_index)
 
 # Move plots to paper directory
 flist <- list.files("plots", "^.+[.]pdf$", full.names = TRUE)
-file.copy(flist,
-          "../../Papers/Quantum\ Foundations\ of\ Utility/images",
-          overwrite = TRUE)
+# file.copy(flist,
+#           "../../Papers/Quantum\ Foundations\ of\ Utility/images",
+#           overwrite = TRUE)
