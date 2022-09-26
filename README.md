@@ -52,7 +52,7 @@ $$
  \begin{align}
    \tag{1}
    f(\bar{e};T^\star,\bar{e}_0,\alpha) = \frac{e^{- \frac{\bar{e}_0}{T^\star} \arctan{\frac{\bar{e}}{\bar{e}_0}}}}{Z
-   \left(1 + \left( \frac{\bar{e}}{\bar{e}_0} \right)^2 \right)^\alpha}. \label{eq:1}
+   \left(1 + \left( \frac{\bar{e}}{\bar{e}_0} \right)^2 \right)^\alpha}.
  \end{align}
 $$
 
@@ -112,7 +112,7 @@ This model does a two step regression to evaluate the parameters of the model,
 $$
 \begin{align}
   \tag{2}
-  \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\bar{m}}{\bar{m}_0}\right]. \label{eq:2}
+  \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\bar{m}}{\bar{m}_0}\right].
 \end{align}
 $$
 
@@ -125,18 +125,18 @@ We can define the economic temperature, $T$, as
 $$
 \begin{align}
   \tag{3}
-  T = P\, T^\star. \label{eq:3}
+  T = P\, T^\star.
 \end{align}
 $$
 
-Where $P$ is the value of money and $T^\star$ is a regression parameter of equation $\eqref{eq:1}$.
+Where $P$ is the value of money and $T^\star$ is a regression parameter of equation (1).
 
 The first regression considers the relationship
 
 $$
 \begin{align}
   \tag{4}
-  P\,\bar{m} = R\,T, \label{eq:4}
+  P\,\bar{m} = R\,T,
 \end{align}
 $$
 
@@ -171,11 +171,11 @@ To do this we define a new independent parameter $\bar{s}^\prime$,
 $$
 \begin{align}
   \tag{5}
-  \bar{s}^\prime = \bar{s} - R \log\frac{\bar{m}}{\bar{m}_0} = \bar{s}_0 + c\,R \log \frac{\bar{e}}{\bar{e}_0}. \label{eq:5}
+  \bar{s}^\prime = \bar{s} - R \log\frac{\bar{m}}{\bar{m}_0} = \bar{s}_0 + c\,R \log \frac{\bar{e}}{\bar{e}_0}.
 \end{align}
 $$
 
-Where the ensemble's remaining entropy, $\bar{s}^\prime$, is computed from the appropriate distribution, e.g. equation $\eqref{eq:5}$, $\bar{e}_0 = 392.1858 \left[GJ\right]$, and $\bar{m}_0 = 37.689 [k$\$ $/person]$.
+Where the ensemble's remaining entropy, $\bar{s}^\prime$, is computed from the appropriate distribution, e.g. equation (5), $\bar{e}_0 = 392.1858 \left[GJ\right]$, and $\bar{m}_0 = 37.689 \[k$\$ $/person\]$.
 
 When the package is run, it will provide an output something like
 
@@ -220,7 +220,7 @@ With the plot of the output
 The three remaining economic parameters are calculated using the following relationships:
 
 1. $T$: $\bar{e} = c\,R\,T$
-2. $P$: Equation $\eqref{eq:3}$
+2. $P$: Equation (3)
 3. $\mu$:  $\mu = T\left[(c + 1) R - \bar{s}\right]$
 
 To see all of the ensemble's parameters run,
@@ -236,11 +236,11 @@ Looking at the relationship between $P$ and $\bar{m}$ we can model the expansion
 $$
 \begin{align}
   \tag{6}
-  \log P = \log C - n \log \bar{m}. \label{eq:6}
+  \log P = \log C - n \log \bar{m}.
 \end{align}
 $$
 
-The regression used $\bar{m}$ with units of $[k$\$ $/person]$, resulting in an output of,
+The regression used $\bar{m}$ with units of $\[k$\$ $/person\]$, resulting in an output of,
 
 ``` bash
 Call:
