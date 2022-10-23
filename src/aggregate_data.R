@@ -56,6 +56,8 @@ for (i in 1:length(years)) {
                                    alpha = regressors[i,3],
                                    c = regressors[i,4])[1] %>% as.numeric()
 }
+# econParameters$T <- (econParameters$M / econParameters$N - regressors$C) /
+#   econParameters$S
 
 data_input <- econParameters
 
@@ -108,6 +110,7 @@ specEcon$U <- specEcon$U / specEcon$N
 specEcon$T <- specEcon$U / fit$coefficients[2]
 specEcon$lambda <- specEcon$T / econParameters$T * 1000
 specEcon$mu <- specEcon$T * ((c + 1) * R - specEcon$S)
+specEcon$year <- as.numeric(years)
 
 # Compare economic deflators
 deflators <- readRDS("data/processed/Deflators.rds")
@@ -165,7 +168,8 @@ del_w <- Const / (1 + fit_poly$coefficients[2]) *
 # Generate summary plots
 Ts_plot <- specEcon %>%
   ggplot(aes(x = S, y = T)) +
-  geom_line(size = 1) +
+  geom_point(size = 1) +
+  geom_text(aes(label = year)) +
   labs(x = TeX("$\\bar{s} [{person}^{-1}]$"),
        y = "T [GJ]",
        title = TeX("$T-\\bar{s}$ Diagram US Economy"),
@@ -177,7 +181,8 @@ ggsave("plots/T-s.jpg",
 
 lambda_m_plot <- specEcon %>%
   ggplot(aes(x = M, y = lambda)) +
-  geom_line(size = 1) +
+  geom_point(size = 1) +
+  geom_text(aes(label = year)) +
   geom_line(data = specEcon, aes(x = M, y = lambda.fit), color = 'red') +
   labs(x = TeX("$\\bar{m}$ [k\\$/person]"),
        y = TeX("$P$ [GJ/k\\$]"),
@@ -190,7 +195,8 @@ ggsave("plots/lambda-m.jpg",
 
 mu_N_plot <- specEcon %>%
   ggplot(aes(x = N, y = mu)) +
-  geom_line(size = 1) +
+  geom_point(size = 1) +
+  geom_text(aes(label = year)) +
   labs(x = TeX("$N$"),
        y = TeX("$\\mu$ [GJ/person]"),
        title = TeX("$\\mu-N$ Diagram US Economy"),
