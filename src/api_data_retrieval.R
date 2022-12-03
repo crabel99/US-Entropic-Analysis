@@ -1,5 +1,4 @@
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 
 source("src/api_key_control.R")
 service_eia <- "https://api.eia.gov/"

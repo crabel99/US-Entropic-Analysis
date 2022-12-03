@@ -40,7 +40,7 @@ years <- names(binReturns)
 
 econParameters <- tibble(year = years, raw[raw$year %in% years, 10]) %>%
   column_to_rownames(var = "year")
-names(econParameters) <- "lambda"
+names(econParameters) <- "P"
 econParameters$M <- double(length(years))
 econParameters$N <- double(length(years))
 econParameters$T <- regressors$T
@@ -56,8 +56,6 @@ for (i in 1:length(years)) {
                                    alpha = regressors[i,3],
                                    c = regressors[i,4])[1] %>% as.numeric()
 }
-# econParameters$T <- (econParameters$M / econParameters$N - regressors$C) /
-#   econParameters$S
 
 data_input <- econParameters
 
@@ -67,19 +65,26 @@ data_input$U <- data_input$U / data_input$N
 fit_m_T <- lm(M ~0 + T, data_input)
 print(summary(fit_m_T))
 
+# Ideal Money Constant
+R <- fit_m_T$coefficients[1]
+names(R) <- "R"
+
 #Normalize the specific extensive parameters to an initial value
-data_input$U <- data_input$U / data_input$U[1]
-data_input$M <- data_input$M / data_input$M[1]
-data_input[, c("U", "M")] <- log(data_input[, c("U", "M")])
+data_input$P <- data_input$U/data_input$S/data_input$T
+data_input$T <- data_input$U/data_input$S
+data_input$U <- data_input$U - data_input$P * data_input$M
+# data_input$U <- data_input$U / data_input$U[1]
+# data_input$M <- data_input$M / data_input$M[1]
+# data_input[, c("U", "M")] <- log(data_input[, c("U", "M")])
 
 # Remove the contribution of money to entropy
-data_input$S <- data_input$S - fit_m_T$coefficients[1] * data_input$M
+# data_input$S <- data_input$S - R * data_input$M
 
 # split <- caTools::sample.split(data_input$S, SplitRatio = 0.8)
 # train <- subset(data_input, split == "TRUE")
 # test <- subset(data_input, split == "FALSE")
 
-fit <- lm(S ~ U , data_input) # (3.34) from Callen
+fit <- lm(U ~ 0 + T , data_input) # (3.34) from Callen
 
 res <- resid(fit)
 fit_norm <- fitdistrplus::fitdist(res, distr = "norm", method = "mle")
@@ -98,17 +103,16 @@ print(summary(fit))
 
 # Generate remaining intensive parameters and collect everything into one
 # dataframe
-R <- fit_m_T$coefficients[1]
-names(R) <- "R"
-c <- fit$coefficients[2]/fit_m_T$coefficients[1]
+
+c <- fit$coefficients[1]/R
 names(c) <- "c"
-s_0 <- fit$coefficients[1]
-names(s_0) <- "s_0"
-specEcon <- econParameters
-specEcon$M <- specEcon$M / specEcon$N / 1000
-specEcon$U <- specEcon$U / specEcon$N
-specEcon$T <- specEcon$U / fit$coefficients[2]
-specEcon$lambda <- specEcon$T / econParameters$T * 1000
+# s_0 <- fit$coefficients[1]
+# names(s_0) <- "s_0"
+specEcon <- data_input # econParameters
+specEcon$M <- specEcon$M /  1000
+# specEcon$U <- specEcon$U / specEcon$N
+# specEcon$T <- specEcon$U / fit$coefficients[2]
+specEcon$P <- specEcon$P * 1000
 specEcon$mu <- specEcon$T * ((c + 1) * R - specEcon$S)
 specEcon$year <- as.numeric(years)
 
@@ -125,7 +129,7 @@ for (i in 1:length(deflator_names)) {
 deflators <- rbind(deflators,
                    data.frame("Year" = row.names(specEcon),
                               "Deflator" = "PI",
-                              "Value" = specEcon$lambda[1] / specEcon$lambda))
+                              "Value" = specEcon$P[1] / specEcon$P))
 deflators$Year <- as.Date(paste(deflators$Year,"1","1",sep = "-"))
 
 plot_index <- deflators %>%
@@ -146,11 +150,11 @@ ggsave("plots/deflators.jpg",
 # Polytropic Analysis
 gamma <- 1 + R / c
 names(gamma) <- "gamma"
-data_poly <- specEcon %>% subset(select = c(M, N, lambda))
+data_poly <- specEcon %>% subset(select = c(M, N, P))
 data_poly$M <- log(data_poly$M)
-data_poly$lambda <- log(data_poly$lambda)
+data_poly$P <- log(data_poly$P)
 
-fit_poly <- lm(lambda ~ M, data_poly)
+fit_poly <- lm(P ~ M, data_poly)
 print(summary(fit_poly))
 
 C <- exp(fit_poly$coefficients[1])
@@ -159,9 +163,9 @@ n <- -fit_poly$coefficients[2]
 names(n) <- "n"
 K <- (n - gamma) / (1 - gamma)
 names(K) <- "K"
-specEcon$lambda.fit <- exp(fit_poly$fitted.values)
-Const <- specEcon$lambda.fit[1]*specEcon$M[1]^(-fit_poly$coefficients[2])
-del_w <- Const / (1 + fit_poly$coefficients[2]) *
+specEcon$P.fit <- exp(fit_poly$fitted.values)
+# Const <- specEcon$P.fit[1]*specEcon$M[1]^(-fit_poly$coefficients[2])
+del_w <- C / (1 + fit_poly$coefficients[2]) *
   (specEcon$M[24]^(1 + fit_poly$coefficients[2]) -
      specEcon$M[1]^(1 + fit_poly$coefficients[2]))
 
@@ -179,18 +183,18 @@ ggsave("plots/T-s.pdf",
 ggsave("plots/T-s.jpg",
        width = 6, height = 4, units = "in")
 
-lambda_m_plot <- specEcon %>%
-  ggplot(aes(x = M, y = lambda)) +
+P_m_plot <- specEcon %>%
+  ggplot(aes(x = M, y = P)) +
   geom_point(size = 1) +
   geom_text(aes(label = year)) +
-  geom_line(data = specEcon, aes(x = M, y = lambda.fit), color = 'red') +
+  geom_line(data = specEcon, aes(x = M, y = P.fit), color = 'red') +
   labs(x = TeX("$\\bar{m}$ [k\\$/person]"),
        y = TeX("$P$ [GJ/k\\$]"),
        title = TeX("$P-\\bar{m}$ Diagram US Economy"),
        subtitle = "1996-2019")
-ggsave("plots/lambda-m.pdf",
+ggsave("plots/P-m.pdf",
        width = 6, height = 4, units = "in")
-ggsave("plots/lambda-m.jpg",
+ggsave("plots/P-m.jpg",
        width = 6, height = 4, units = "in")
 
 mu_N_plot <- specEcon %>%
@@ -226,13 +230,12 @@ ggsave("plots/m-T*.jpg",
 s_u_data <- fit$model
 s_u_data$Fit <- fit$fitted.values
 s_u_plot <- s_u_data %>%
-  ggplot(aes(x = U, y = S)) +
+  ggplot(aes(x = T, y = U)) +
   geom_point(size = 1) +
-  geom_line(data = s_u_data, aes(x = U, y = Fit), color = 'red') +
-  labs(x = TeX("$\\log \\left(\\bar{e}/\\bar{e}_0\\right)$"),
-       y = TeX("$\\bar{s}{\\prime} [{person}^{-1}]$"),
-       title = TeX("$\\bar{s}\\prime-\\log\\left(\\frac{\\bar{e}}{\\bar{e}_0}
-                   \\right)$ Plot US Economy"),
+  geom_line(data = s_u_data, aes(x = T, y = Fit), color = 'red') +
+  labs(x = TeX("$T [GJ]$"),
+       y = TeX("$\\bar{e} [GJ\\cdot{person}^{-1}]$"),
+       title = TeX("$\\bar{e}-T$ Plot US Economy"),
        subtitle = "1996-2019")
 ggsave("plots/s*-u.pdf",
        width = 6, height = 4, units = "in")
@@ -274,7 +277,7 @@ ggsave("plots/s*-u.jpg",
 # Print output plots
 print(Ts_plot)
 print(mu_N_plot)
-print(lambda_m_plot)
+print(P_m_plot)
 print(T_m_plot)
 print(s_u_plot)
 print(plot_index)
@@ -284,3 +287,5 @@ flist <- list.files("plots", "^.+[.]pdf$", full.names = TRUE)
 # file.copy(flist,
 #           "../../Papers/Quantum\ Foundations\ of\ Utility/images",
 #           overwrite = TRUE)
+
+rm(i, deflator_names, flist, ind, ind_96, res, years)
