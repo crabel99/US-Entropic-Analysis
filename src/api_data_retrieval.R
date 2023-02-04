@@ -47,15 +47,15 @@ data_ts <- data_ts %>% arrange(-desc(date))
 
 # Utility
 # Sector efficiency taken from https://flowcharts.llnl.gov/commodities/energy
-data_ts$UTILITY <- (data_ts$TOTAL.TEACBUS.A * 0.21 +
+data_ts$VALUE <- (data_ts$TOTAL.TEACBUS.A * 0.21 +
   data_ts$TOTAL.TECCBUS.A * 0.65 +
   data_ts$TOTAL.TEICBUS.A * 0.49 +
   data_ts$TOTAL.TERCBUS.A * 0.65) * 1055.056 / 1000 # PJ
 
 
 # Marginal Utility
-data_ts$MARGINAL.UTILITY <- (
-  data_ts$UTILITY / data_ts$TOTAL.TETCVUS.A  # GJ/$
+data_ts$MARGINAL.VALUE <- (
+  data_ts$VALUE / data_ts$TOTAL.TETCVUS.A  # GJ/$
 )
 
 # Nominal GDP
@@ -97,14 +97,14 @@ data_raw <- c(rep(NA, length(data_ts$year) - length(data_raw$value)),
 data_ts$M2NS <- data_raw
 
 # Energy Price Index
-data_ts$EPI <- (rep(data_ts$MARGINAL.UTILITY[22], length(data_ts$year)) /
-                  data_ts$MARGINAL.UTILITY)
+data_ts$EPI <- (rep(data_ts$MARGINAL.VALUE[22], length(data_ts$year)) /
+                  data_ts$MARGINAL.VALUE)
 
 # GDPA              Billions of dollars
 # TOTAL.TEGDSUS.A   Percent
 # TOTAL.TETCBUS.A   Trillion Btu
-# UTILITY           PJ
-# MARGINAL.UTILITY  GJ/$
+# VALUE             PJ
+# MARGINAL.VALUE    GJ/$
 
 saveRDS(data_ts, file = "data/raw/EIA-FRED.rds")
 rm(data_raw, service_eia, service_fred, createKey, updateKey, accessKey, i)
@@ -137,8 +137,8 @@ plot_index <- data_index %>%
 saveRDS(plot_index, file = "data/processed/Deflator Plot.rds")
 print(plot_index)
 
-plot_marginal_utlity <- data_ts[!is.na(data_ts$MARGINAL.UTILITY),] %>%
-  ggplot(aes(x = year, y = MARGINAL.UTILITY * 1000)) +
+plot_marginal_utlity <- data_ts[!is.na(data_ts$MARGINAL.VALUE),] %>%
+  ggplot(aes(x = year, y = MARGINAL.VALUE * 1000)) +
   geom_line(size = 1) +
   scale_y_continuous(trans = 'log10') +
   labs(x = "Year",

@@ -1,17 +1,26 @@
 library(tidyverse)
 library(latex2exp)
-# library(rayshader)
-# library(magick)
-# library(hrbrthemes)
 
 
+# Configure the analysis
+fitModel <- "gibbs_model.stan"
+# fitModel <- "maxwell_model.stan"
+
+# # Select the appropriate table either "11_agi", "11_ti", or "21"
+table <- "11_agi"
+
+
+# Function Declarations
 integrand <- function(x,T,r0,alpha,c) {
-  #Gibbs
-  v = 1 / (1 + (x / r0)^2)^((1 + alpha) / 2) * exp(-r0/T * atan(x / r0));
-  #Maxwell
-  # v = ((1 - x/r0 + (x/r0)^2) / (1 + x/r0)^2)^(r0 / (T * 6)) *
-  #   x / (1 + (x/r0)^3)^((2 + alpha)/3) *
-  #   exp(r0 / (sqrt(3) * T) * atan((1 - 2 * x / r0) / sqrt(3)))
+  if (fitModel == "gibbs_model.stan") {
+    #Gibbs
+    v = 1 / (1 + (x / r0)^2)^((1 + alpha) / 2) * exp(-r0/T * atan(x / r0));
+  } else {
+    #Maxwell
+    v = ((1 - x/r0 + (x/r0)^2) / (1 + x/r0)^2)^(r0 / (T * 6)) *
+      x / (1 + (x/r0)^3)^((2 + alpha)/3) *
+      exp(r0 / (sqrt(3) * T) * atan((1 - 2 * x / r0) / sqrt(3)))
+  }
   return(-log(v / c) * v / c)
 }
 
@@ -19,12 +28,6 @@ utility <- function(u, m, c, R, s_0, u_0, m_0) {
   return(s_0 + R*(c*log(u / u_0) + log(m / m_0)))
 }
 
-# Configure the analysis
-fitModel <- "gibbs_model.stan"
-# fitModel <- "maxwell_model.stan"
-
-# Select the appropriate table either "11_agi", "11_ti", or "21"
-table <- "11_agi"
 
 # Load the data
 raw <- readRDS("data/raw/EIA-FRED.rds")
@@ -42,10 +45,15 @@ econParameters <- tibble(year = years, raw[raw$year %in% years, 10]) %>%
   column_to_rownames(var = "year")
 names(econParameters) <- "P"
 econParameters$M <- double(length(years))
-econParameters$N <- double(length(years))
-econParameters$T <- regressors$T
+econParameters$Tstar <- regressors$T
+econParameters$T <- double(length(years))
 econParameters$S <- double(length(years))
-econParameters$U <- raw$UTILITY[raw$year %in% years] * 1e6
+econParameters$mu <- double(length(years))
+econParameters$N <- double(length(years))
+econParameters$E <- raw$VALUE[raw$year %in% years] * 1e6
+econParameters$F <- double(length(years))
+econParameters$H <- double(length(years))
+
 
 for (i in 1:length(years)) {
   econParameters$M[i] <- sum(binIncome[[i]]) * 1000
@@ -57,64 +65,60 @@ for (i in 1:length(years)) {
                                    c = regressors[i,4])[1] %>% as.numeric()
 }
 
-data_input <- econParameters
+specEcon <- econParameters # Specific values (per person) for extensive vars
 
-# Fit the specific money supply and and temperature to specific entropy
-data_input$M <- data_input$M / data_input$N
-data_input$U <- data_input$U / data_input$N
-fit_m_T <- lm(M ~0 + T, data_input)
-print(summary(fit_m_T))
+# Fit for the ideal money constant
+specEcon$M <- specEcon$M / specEcon$N
+specEcon$Tstar <- specEcon$M / (specEcon$S - log(regressors$C))
+fit_R <- lm(M ~0 + Tstar, specEcon)
+print(summary(fit_R))
 
-# Ideal Money Constant
-R <- fit_m_T$coefficients[1]
-names(R) <- "R"
+params <- list()
+params$R <- fit_R$coefficients[1] # Ideal Money Constant
+params$R <- unname(params$R, force = TRUE)
 
-#Normalize the specific extensive parameters to an initial value
-data_input$P <- data_input$U/data_input$S/data_input$T
-data_input$T <- data_input$U/data_input$S
-data_input$U <- data_input$U - data_input$P * data_input$M
-# data_input$U <- data_input$U / data_input$U[1]
-# data_input$M <- data_input$M / data_input$M[1]
-# data_input[, c("U", "M")] <- log(data_input[, c("U", "M")])
+# Fit for the specific heat/value capacity
+specEcon$E <- specEcon$E / specEcon$N
+specEcon$T <- specEcon$E / (specEcon$S - log(regressors$C))
+fit_c <- lm(E ~ 0 + T , specEcon) # (3.34) from Callen
+print(summary(fit_c))
 
-# Remove the contribution of money to entropy
-# data_input$S <- data_input$S - R * data_input$M
+params$c <- fit_c$coefficients[1]/params$R #Specific Heat Capacity
+params$c <- unname(params$c, force = TRUE)
 
-# split <- caTools::sample.split(data_input$S, SplitRatio = 0.8)
-# train <- subset(data_input, split == "TRUE")
-# test <- subset(data_input, split == "FALSE")
 
-fit <- lm(U ~ 0 + T , data_input) # (3.34) from Callen
-
-res <- resid(fit)
-fit_norm <- fitdistrplus::fitdist(res, distr = "norm", method = "mle")
-# Evaluate the fit
-plot(fitted(fit), res)
-plot(fit_norm)
-print(summary(fit))
-
-#Evaluate the model against the testing data set
-# pred <- predict(fit, test, se.fit = TRUE)
-# plot(density(pred$fit - test$S))
-# pred_r2 <- 1 - sum((pred$fit - test$S)^2) / sum((test$S - mean(test$S))^2)
-# pred_t <- (mean(pred$fit) - mean(test$S))/(sqrt(var(pred$fit -
-#                                                       test$S)*length(test$S)))
-# pred_p <- pt(q = pred_t, df = length(test$S) - 1)
-
-# Generate remaining intensive parameters and collect everything into one
-# dataframe
-
-c <- fit$coefficients[1]/R
-names(c) <- "c"
-# s_0 <- fit$coefficients[1]
-# names(s_0) <- "s_0"
-specEcon <- data_input # econParameters
-specEcon$M <- specEcon$M /  1000
-# specEcon$U <- specEcon$U / specEcon$N
-# specEcon$T <- specEcon$U / fit$coefficients[2]
-specEcon$P <- specEcon$P * 1000
-specEcon$mu <- specEcon$T * ((c + 1) * R - specEcon$S)
+# Remaining Economic Parameters
+specEcon$F <- -specEcon$T * log(regressors$C) # [GJ/person]
+specEcon$P <- specEcon$T / specEcon$Tstar * 1000 # [GJ/k$]
+specEcon$M <- specEcon$M / 1000 # [k$/person]
+specEcon$H <- specEcon$E + specEcon$P * specEcon$M # [GJ/person]
+specEcon$mu <- specEcon$T * ((params$c + 1) * params$R - specEcon$S) # [GJ/person]
 specEcon$year <- as.numeric(years)
+
+
+# Generate the composite equation of state
+model <- params$c * params$R * log(specEcon$E / specEcon$E[1]) +
+  params$R * log(specEcon$M / specEcon$M[1])
+res <- specEcon$S - model
+fit_norm <- fitdistrplus::fitdist(res, distr = "norm", method = "mle")
+params$s_0 <- fit_norm$estimate[1]
+params$s_0 <- unname(params$s_0, force = TRUE)
+model <- params$s_0 + model
+res <- res - params$s_0
+
+
+# Evaluate the fit
+plot(fit_norm)
+summary(fit_norm)
+R_squared <- 1 - sum(res^2) / sum((specEcon$S - mean(specEcon$S))^2)
+t_test <- list(
+  t.test(model - params$s_0, mu = mean(specEcon$S)),
+  t.test(model - params$c * params$R * log(specEcon$E / specEcon$E[1]),
+         mu = mean(specEcon$S)),
+  t.test(model - params$R * log(specEcon$M / specEcon$M[1]) ,
+         mu = mean(specEcon$S))
+)
+names(t_test) <- c("s_0","c", "R")
 
 # Compare economic deflators
 deflators <- readRDS("data/processed/Deflators.rds")
@@ -148,26 +152,29 @@ ggsave("plots/deflators.jpg",
        width = 10, height = 5.625, units = "in")
 
 # Polytropic Analysis
-gamma <- 1 + R / c
-names(gamma) <- "gamma"
-data_poly <- specEcon %>% subset(select = c(M, N, P))
+params$gamma <- 1 + params$R / params$c
+params$gamma <- unname(params$gamma, force = TRUE)
+
+data_poly <- specEcon %>% subset(select = c(M, P))
 data_poly$M <- log(data_poly$M)
 data_poly$P <- log(data_poly$P)
 
 fit_poly <- lm(P ~ M, data_poly)
 print(summary(fit_poly))
 
-C <- exp(fit_poly$coefficients[1])
-names(C) <- "C"
-n <- -fit_poly$coefficients[2]
-names(n) <- "n"
-K <- (n - gamma) / (1 - gamma)
-names(K) <- "K"
+params_poly <- list()
+params_poly$C <- exp(fit_poly$coefficients[1])
+params_poly$C <- unname(params_poly$C, force = TRUE)
+params_poly$n <- -fit_poly$coefficients[2]
+params_poly$n <- unname(params_poly$n, force = TRUE)
+params_poly$K <- (params_poly$n - params$gamma) / (1 - params$gamma)
+params_poly$K <- unname(params_poly$K, force = TRUE)
 specEcon$P.fit <- exp(fit_poly$fitted.values)
-# Const <- specEcon$P.fit[1]*specEcon$M[1]^(-fit_poly$coefficients[2])
-del_w <- C / (1 + fit_poly$coefficients[2]) *
-  (specEcon$M[24]^(1 + fit_poly$coefficients[2]) -
-     specEcon$M[1]^(1 + fit_poly$coefficients[2]))
+
+# Work extracted from society
+params_poly$del_w <- params_poly$C / (1 - params_poly$n) *
+  (specEcon$M[24]^(1 - params_poly$n) -
+     specEcon$M[1]^(1 - params_poly$n))
 
 # Generate summary plots
 Ts_plot <- specEcon %>%
@@ -197,6 +204,19 @@ ggsave("plots/P-m.pdf",
 ggsave("plots/P-m.jpg",
        width = 6, height = 4, units = "in")
 
+P_H_plot <- specEcon %>%
+  ggplot(aes(x = H, y = P)) +
+  geom_point(size = 1) +
+  geom_text(aes(label = year)) +
+  labs(x = TeX("$\\bar{h}$ [GJ/person]"),
+       y = TeX("$P$ [GJ/k\\$]"),
+       title = TeX("$P-\\bar{h}$ Diagram US Economy"),
+       subtitle = "1996-2019")
+ggsave("plots/P-H.pdf",
+       width = 6, height = 4, units = "in")
+ggsave("plots/P-H.jpg",
+       width = 6, height = 4, units = "in")
+
 mu_N_plot <- specEcon %>%
   ggplot(aes(x = N, y = mu)) +
   geom_point(size = 1) +
@@ -211,13 +231,13 @@ ggsave("plots/mu_N.jpg",
        width = 6, height = 4, units = "in")
 
 
-T_m_data <- fit_m_T$model / 1000
-T_m_data$Fit <- fit_m_T$fitted.values / 1000
+T_m_data <- fit_R$model / 1000
+T_m_data$Fit <- fit_R$fitted.values / 1000
 
 T_m_plot <- T_m_data %>%
-  ggplot(aes(x = T, y = M)) +
+  ggplot(aes(x = Tstar, y = M)) +
   geom_point(size = 1) +
-  geom_line(data = T_m_data, aes(x = T, y = Fit), color = 'red') +
+  geom_line(data = T_m_data, aes(x = Tstar, y = Fit), color = 'red') +
   labs(x = TeX("$T^*$ [k\\$]"),
        y = TeX("$\\bar{m}$ [k\\$/person]"),
        title = TeX("$\\bar{m}-T^*$ Plot US Economy"),
@@ -227,59 +247,29 @@ ggsave("plots/m-T*.pdf",
 ggsave("plots/m-T*.jpg",
        width = 6, height = 4, units = "in")
 
-s_u_data <- fit$model
-s_u_data$Fit <- fit$fitted.values
-s_u_plot <- s_u_data %>%
-  ggplot(aes(x = T, y = U)) +
+e_T_data <- fit_c$model
+e_T_data$Fit <- fit_c$fitted.values
+e_T_plot <- e_T_data %>%
+  ggplot(aes(x = T, y = E)) +
   geom_point(size = 1) +
-  geom_line(data = s_u_data, aes(x = T, y = Fit), color = 'red') +
+  geom_line(data = e_T_data, aes(x = T, y = Fit), color = 'red') +
   labs(x = TeX("$T [GJ]$"),
        y = TeX("$\\bar{e} [GJ\\cdot{person}^{-1}]$"),
        title = TeX("$\\bar{e}-T$ Plot US Economy"),
        subtitle = "1996-2019")
-ggsave("plots/s*-u.pdf",
+ggsave("plots/e-T.pdf",
        width = 6, height = 4, units = "in")
-ggsave("plots/s*-u.jpg",
+ggsave("plots/e-T.jpg",
        width = 6, height = 4, units = "in")
-
-
-# Utility Surface Plot
-# len <- 100
-# x <- rep(0, len)
-# y <- rep(0, len)
-# x[1] <- round(min(specEcon$U) / 1.1)
-# x[len] <- round(max(specEcon$U) * 1.1)
-# del_x <- (x[len] - x[1]) / (len - 1)
-# y[1] <- round(min(specEcon$M) / 1.1)
-# y[len] <- round(max(specEcon$M) * 1.1)
-# del_y <- (y[len] - y[1]) / (len - 1)
-# for (i in 2:len) {
-#   x[i] <- x[i - 1] + del_x
-#   y[i] <- y[i - 1] + del_y
-# }
-
-# data <- expand.grid(U = x, M = y)
-# data$S <- utility(data$U, data$M, c, R, s_0, specEcon$U[1], specEcon$M[1])
-#
-# s_surface <- data %>% ggplot(aes(x = U, y = M, fill = S)) +
-#   geom_tile() +
-#   geom_line(specEcon, mapping = aes(U, M, color = S), size = 3) +
-#   scale_color_continuous(limits = c(min(data$S), max(data$S)))
-#
-#
-# plot_gg(s_surface, width = 5, height = 5, multicore = TRUE, scale = 250,
-#         zoom = 0.7, theta = 10, phi = 30, windowsize = c(800, 800))
-# Sys.sleep(0.2)
-#
-# render_snapshot(clear = TRUE)
 
 
 # Print output plots
 print(Ts_plot)
 print(mu_N_plot)
 print(P_m_plot)
+print(P_H_plot)
 print(T_m_plot)
-print(s_u_plot)
+print(e_T_plot)
 print(plot_index)
 
 # Move plots to paper directory
