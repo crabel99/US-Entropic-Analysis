@@ -38,7 +38,7 @@ renv::restore()
 ### Estimating the Income Distribution
 
 The income distribution model regression uses HMC( Hamiltonian Monte Carlo) with NUTS (No U-Turn Sampling) in a Bayesian framework to estimate the model's hyper-parameters.
-This is done using `rstan` which is an implementation of [`Stan](https://mc-stan.org/).
+This is done using `rstan` which is an implementation of [Stan](https://mc-stan.org/).
 
 There are two different distributions that can be selected:
 
@@ -46,22 +46,24 @@ There are two different distributions that can be selected:
 2. [`maxwell_model.stan`](src/maxwell_model.stan)
 
 The Gibbs model is taken directly from Banerjee and Yakovenko [(2010)](https://arxiv.org/abs/0912.4898) derivation.
-Their derivation uses the Gibbs distribution as the basis of the thermal portion of the income distribution and the Pareto distribution for the epithermal portion,
+Their derivation uses the Gibbs distribution as the basis of the thermal portion of the income distribution and the Pareto distribution for the epithermal portion
 
 $$
  \begin{align}
    \tag{1}
-   f(\bar{e};T^\star,\bar{e}_0,\alpha) = \frac{e^{- \frac{\bar{e}_0}{T^\star} \arctan{\frac{\bar{e}}{\bar{e}_0}}}}{Z
-   \left(1 + \left( \frac{\bar{e}}{\bar{e}_0} \right)^2 \right)^\alpha}.
+   f(m;T^\star,m_0,\alpha) = \frac{e^{- \frac{m_0}{T^\star} \arctan{\frac{m}{m_0}}}}{Z
+   \left(1 + \left( \frac{m}{m_0} \right)^2 \right)^\alpha}.
  \end{align}
 $$
 
-The Maxwell model is derived from the [Maxwell distribution](https://en.wikipedia.org/wiki/Maxwell%E2%80%93Boltzmann_distribution#Distribution_for_the_energy) in the same manner that the Gibbs distribution was using the stationary Fokker-Plank equation to include the Pareto portion of the distribution.
+Where $m$ is the income, $m_0$ is the thermal--epithermal crosover income, $T^\star$ is the monetary temperature of the thermal portion, and $\alpha$ is the epithermal Pareto exponent.
+
+The Maxwell model is derived from the [Maxwell distribution](https://en.wikipedia.org/wiki/Maxwell%E2%80%93Boltzmann_distribution#Distribution_for_the_energy) in the same manner that the Gibbs distribution, using the stationary Fokker-Plank equation to include the Pareto portion of the distribution.
 
 The Gibbs distribution  provides the better fit of the Adjusted Gross Income (AGI), while the Maxwell distribution provides the better fit of the Taxable Income (TI).
 
 By default, [`income_model_regression.R`](src/income_model_regression.R) is configured to follow the same method and dataset of Banerjee and Yakoveno (2010).
-The regression can be configured to use the other distribution or other datasets, by modifying the two variables, `fitModel` and `fitData`,
+The regression can be configured to use the other distribution or other datasets, by modifying the two variables, `fitModel` and `table`,
 
 ``` R
 # Select Model and Load Data
@@ -107,40 +109,40 @@ source("src/aggregate_data.R")
 
 #### Equation of State
 
-This model does a three regressions to evaluate the parameters of the model,
+This model does three regressions to evaluate the parameters of the model,
 
 $$
 \begin{align}
   \tag{2}
-  \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\bar{m}}{\bar{m}_0}\right].
+  \bar{s} = \bar{s}_0 + R \left[\log\left(\frac{\bar{e}}{\bar{e}_0}\right)^c + \log\frac{\overline{m}}{\overline{m}_0}\right].
 \end{align}
 $$
 
 Where the regression coefficients are: initial utility $\bar{s}_0$, the return to scale of money $R$, and the value capacity of the individual $c$.
-The dependent variable is the utility $\bar{s}$ and the independent variables are the per capita exergy input $\bar{e}$ and the average income $\bar{m}$ and their associated initial values $\bar{e}_0$ and $\bar{m}_0$ respectively.
+The dependent variable is the utility $\bar{s}$ and the independent variables are the per capita exergy input $\bar{e}$ and the average income $\overline{m}$ and their associated initial values $\bar{e}_0$ and $\overline{m}_0$ respectively.
 This model is a slight adaptation of Callen's (1985, p. 68) equation 3.38 which is the equation of state for an ideal gas.
 Since entropy, $\bar{s}$, is economic utility, this is a two parameter, energy and money, Cobb-Douglas Production function.
 
 The first regression is to estimate $R$.
 We can construct a canonical ensemble with any observable, it does not necessarily have to be energy.
 We have such an ensemble with equation (1), however it does not purely follow the canonical expoential distribution.
-To resolove this we will follow Matsoukas (p. 92, 2018) generalized cluster ensemble, and separate Banerjee and Yakovenko's model into the relevant components,
+To resolove this we will follow Matsoukas (2018, p. 92) generalized cluster ensemble, and separate Banerjee and Yakovenko's model into the relevant components,
 
 $$
 \begin{align}
   \tag{3}
-  \log \omega - \log q = \beta_1 \bar{x}_1.
+  \log \omega - \log Z = \beta_1 \bar{x}_1.
 \end{align}
 $$
 
-We recognize $\log \omega$ as being the associated von Neumann entropy, $\log q$ as being $\log Z$ from equation (1), $\bar{x}_1$ as being the average income $\bar{m}$ for a given year, and the term $\beta_1$ is the inverse monetary temperature, $T^\star$.
+We recognize $\log \omega$ as being the associated von Neumann entropy, $\log q$ as being $\log Z$ from equation (1), $\bar{x}_1$ as being the average income $\overline{m}$ for a given year, and the term $\beta_1$ is the inverse monetary temperature, $T^\star$.
 
 We compute $T^\star$ for a given year as being
 
 $$
 \begin{align}
   \tag{4}
-  T^\star = \frac{\bar{m}}{\log \omega - \log Z}.
+  T^\star = \frac{\overline{m}}{\log \omega - \log Z}.
 \end{align}
 $$
 
@@ -169,7 +171,7 @@ Using the familiar ideal gas equation where we replace volume with money and pre
 $$
 \begin{align}
   \tag{7}
-  \bar{m} = R \, T^\star.
+  \overline{m} = R \, T^\star.
 \end{align}
 $$
 
@@ -250,7 +252,7 @@ $gamma
 
 The two remaining economic parameters are calculated using the following relationships:
 
-1. $P$: Equation (3)
+1. $P$: Equation (6)
 2. $\mu$:  $\mu = T\left[(c + 1) \, R - \bar{s}\right]$
 
 To see all of the ensemble's parameters run,
@@ -261,16 +263,16 @@ view(specEcon)
 
 #### The Economic Path - A Polytropic Process
 
-Looking at the relationship between $P$ and $\bar{m}$ we can model the expansion in nominal wages a polytropic process,
+Looking at the relationship between $P$ and $\overline{m}$ we can model the expansion in nominal wages a polytropic process,
 
 $$
 \begin{align}
   \tag{9}
-  \log P = \log C - n \log \bar{m}.
+  \log P = \log C - n \log \overline{m}.
 \end{align}
 $$
 
-The regression used $\bar{m}$ with units of $[k\$ /person]$, resulting in an output of,
+The regression used $\overline{m}$ with units of $[k\$ /person]$, resulting in an output of,
 
 ``` bash
 Call:

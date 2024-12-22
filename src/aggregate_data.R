@@ -56,7 +56,7 @@ econParameters$H <- double(length(years))
 
 
 for (i in 1:length(years)) {
-  econParameters$M[i] <- sum(binIncome[[i]]) * 1000
+  econParameters$M[i] <- sum(binIncome[[i]])
   econParameters$N[i] <- sum(binReturns[[i]])
   econParameters$S[i] <- integrate(integrand, 0.01, 1e9,
                                    T = regressors[i,1],
@@ -65,60 +65,52 @@ for (i in 1:length(years)) {
                                    c = regressors[i,4])[1] %>% as.numeric()
 }
 
-specEcon <- econParameters # Specific values (per person) for extensive vars
-
 # Fit for the ideal money constant
-specEcon$M <- specEcon$M / specEcon$N
-specEcon$Tstar <- specEcon$M / (specEcon$S - log(regressors$C))
-fit_R <- lm(M ~0 + Tstar, specEcon)
+specEcon <- econParameters # Specific values (per person) for extensive vars
+specEcon$M <- specEcon$M / specEcon$N # [k$/person]
+specEcon$E <- specEcon$E / specEcon$N # [GJ/person]
+specEcon$Tstar <- specEcon$M / (specEcon$S - log(regressors$C)) #[k$]
+fit_R <- lm(M ~ Tstar-1, specEcon)
 print(summary(fit_R))
 
 params <- list()
-params$R <- fit_R$coefficients[1] # Ideal Money Constant
-params$R <- unname(params$R, force = TRUE)
+params$R <- fit_R$coefficients[[1]] # Ideal Money Constant
 
 # Fit for the specific heat/value capacity
-specEcon$E <- specEcon$E / specEcon$N
-specEcon$T <- specEcon$E / (specEcon$S - log(regressors$C))
-fit_c <- lm(E ~ 0 + T , specEcon) # (3.34) from Callen
+data.c <- data.frame(s = specEcon$S - specEcon$S[1],
+                     m = params$R * log(specEcon$M / specEcon$M[1]),
+                     e = params$R * log(specEcon$E / specEcon$E[1]))
+fit_c <- lm(s - m ~ e-1, data.c)
 print(summary(fit_c))
-
-params$c <- fit_c$coefficients[1]/params$R #Specific Heat Capacity
-params$c <- unname(params$c, force = TRUE)
+params$c <- fit_c$coefficients[[1]]
+params$s0 <- specEcon$S[1]
+params$e0 <- specEcon$E[1]
+params$m0 <- specEcon$M[1]
 
 
 # Remaining Economic Parameters
+specEcon$T <- specEcon$E / (params$c * params$R) # [GJ]
 specEcon$F <- -specEcon$T * log(regressors$C) # [GJ/person]
-specEcon$P <- specEcon$T / specEcon$Tstar * 1000 # [GJ/k$]
-specEcon$M <- specEcon$M / 1000 # [k$/person]
+specEcon$P <- specEcon$T / specEcon$Tstar  # [GJ/k$]
 specEcon$H <- specEcon$E + specEcon$P * specEcon$M # [GJ/person]
 specEcon$mu <- specEcon$T * ((params$c + 1) * params$R - specEcon$S) # [GJ/person]
-specEcon$year <- as.numeric(years)
-
+specEcon$year <- years
 
 # Generate the composite equation of state
-model <- params$c * params$R * log(specEcon$E / specEcon$E[1]) +
-  params$R * log(specEcon$M / specEcon$M[1])
+model <- params$s0 + params$R * (params$c * log(specEcon$E / params$e0) +
+                                   log(specEcon$M / params$m0))
 res <- specEcon$S - model
-fit_norm <- fitdistrplus::fitdist(res, distr = "norm", method = "mle")
-params$s_0 <- fit_norm$estimate[1]
-params$s_0 <- unname(params$s_0, force = TRUE)
-model <- params$s_0 + model
-res <- res - params$s_0
-
 
 # Evaluate the fit
-plot(fit_norm)
-summary(fit_norm)
 R_squared <- 1 - sum(res^2) / sum((specEcon$S - mean(specEcon$S))^2)
 t_test <- list(
-  t.test(model - params$s_0, mu = mean(specEcon$S)),
-  t.test(model - params$c * params$R * log(specEcon$E / specEcon$E[1]),
+  #t.test(model - params$s_0, mu = mean(specEcon$S)),
+  t.test(model - params$c * params$R * log(specEcon$E / params$e0),
          mu = mean(specEcon$S)),
-  t.test(model - params$R * log(specEcon$M / specEcon$M[1]) ,
+  t.test(model - params$R * log(specEcon$M / params$m0) ,
          mu = mean(specEcon$S))
 )
-names(t_test) <- c("s_0","c", "R")
+names(t_test) <- c("c", "R")
 
 # Compare economic deflators
 deflators <- readRDS("data/processed/Deflators.rds")
@@ -138,7 +130,7 @@ deflators$Year <- as.Date(paste(deflators$Year,"1","1",sep = "-"))
 
 plot_index <- deflators %>%
   ggplot(aes(x = Year, y = Value, color = Deflator, group = Deflator)) +
-  geom_line( size = 1) +
+  geom_line( linewidth = 1) +
   scale_x_date("Year",
                breaks = scales::breaks_width("10 years", offset = "3 years"),
                labels = scales::label_date_short()) +
@@ -153,7 +145,7 @@ ggsave("plots/deflators.jpg",
 
 # Polytropic Analysis
 params$gamma <- 1 + params$R / params$c
-params$gamma <- unname(params$gamma, force = TRUE)
+# params$gamma <- unname(params$gamma, force = TRUE)
 
 data_poly <- specEcon %>% subset(select = c(M, P))
 data_poly$M <- log(data_poly$M)
@@ -231,16 +223,16 @@ ggsave("plots/mu_N.jpg",
        width = 6, height = 4, units = "in")
 
 
-T_m_data <- fit_R$model / 1000
-T_m_data$Fit <- fit_R$fitted.values / 1000
+T_m_data <- fit_R$model
+T_m_data$Fit <- fit_R$fitted.values
 
 T_m_plot <- T_m_data %>%
   ggplot(aes(x = Tstar, y = M)) +
   geom_point(size = 1) +
   geom_line(data = T_m_data, aes(x = Tstar, y = Fit), color = 'red') +
-  labs(x = TeX("$T^*$ [k\\$]"),
+  labs(x = TeX("$T_m$ [k\\$]"),
        y = TeX("$\\bar{m}$ [k\\$/person]"),
-       title = TeX("$\\bar{m}-T^*$ Plot US Economy"),
+       title = TeX("$\\bar{m}-T_m$ Plot US Economy"),
        subtitle = "1996-2019")
 ggsave("plots/m-T*.pdf",
        width = 6, height = 4, units = "in")
@@ -248,13 +240,14 @@ ggsave("plots/m-T*.jpg",
        width = 6, height = 4, units = "in")
 
 e_T_data <- fit_c$model
+e_T_data$T <- specEcon$T
 e_T_data$Fit <- fit_c$fitted.values
 e_T_plot <- e_T_data %>%
-  ggplot(aes(x = T, y = E)) +
+  ggplot(aes(x = T, y = e)) +
   geom_point(size = 1) +
   geom_line(data = e_T_data, aes(x = T, y = Fit), color = 'red') +
   labs(x = TeX("$T [GJ]$"),
-       y = TeX("$\\bar{e} [GJ\\cdot{person}^{-1}]$"),
+       y = TeX("$\\bar{s} - R \\log\\left[\\bar{m}/m_0\\right]$"),
        title = TeX("$\\bar{e}-T$ Plot US Economy"),
        subtitle = "1996-2019")
 ggsave("plots/e-T.pdf",
@@ -262,6 +255,15 @@ ggsave("plots/e-T.pdf",
 ggsave("plots/e-T.jpg",
        width = 6, height = 4, units = "in")
 
+
+EPI_plot <- raw %>% subset(!is.na(MARGINAL.VALUE)) %>%
+  ggplot(aes(x = year, y = MARGINAL.VALUE * 1000)) +
+  geom_line(color = 'red') +
+  scale_y_continuous(trans = 'log10') +
+  labs(x = TeX("$year$"),
+       y = TeX("Marginal Value [MJ/\\$]$"),
+       title = TeX("Marginal Value of the US dollar"),
+       subtitle = "1970-2020")
 
 # Print output plots
 print(Ts_plot)
@@ -274,8 +276,8 @@ print(plot_index)
 
 # Move plots to paper directory
 flist <- list.files("plots", "^.+[.]pdf$", full.names = TRUE)
-# file.copy(flist,
-#           "../../Papers/Quantum\ Foundations\ of\ Utility/images",
-#           overwrite = TRUE)
+file.copy(flist,
+          "../../Papers/Resolving\ the\ Allais\ Paradox/images",
+          overwrite = TRUE)
 
 rm(i, deflator_names, flist, ind, ind_96, res, years)

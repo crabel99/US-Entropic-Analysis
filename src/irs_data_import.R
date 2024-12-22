@@ -36,23 +36,25 @@ binMin$"1996" <- c(0, 1, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
 #                  1000000)
 
 files <- list.files(path = pathName)
-files <- c(files[21:length(files)],files[1:20])
-years <- 2019 - length(files) + 1
-years <- rep(years:2019)
+files <- c(files[22:length(files)],files[1:21])
+years <- 2020 - length(files) + 1
+years <- rep(years:2020)
 
-# AGI from Table 2.1 and Taxable Income from Table 1.1
-dataNames <- c("Returns", "Income")
 # AGI from Table 1.1
 # dataNames <- c("Returns", "delete", "Income")
+#
+# AGI from Table 2.1 and Taxable Income from Table 1.1
+dataNames <- c("Returns", "Income")
+
 
 
 for (i in 1:length(files)) {
-  dirName <- path.expand(paste(pathName, files[i], sep ="/"))
+  dirName <- path.expand(paste(pathName, files[i], sep = "/"))
   # Adjusted Gross Income Table 2.1
   # if (years[i] > 2012) {
   #   tableRange <- "B11:C32"
   #   incomeMin <- binMin$"00"
-  # } else if(years[i] > 2009) {
+  # } else if (years[i] > 2009) {
   #   tableRange <- "B11:C33"
   #   incomeMin <- binMin$"10"
   # } else if (years[i] > 2004) {
