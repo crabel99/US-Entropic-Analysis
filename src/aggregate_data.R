@@ -247,7 +247,7 @@ e_T_plot <- e_T_data %>%
   geom_point(size = 1) +
   geom_line(data = e_T_data, aes(x = T, y = Fit), color = 'red') +
   labs(x = TeX("$T [GJ]$"),
-       y = TeX("$\\bar{s} - R \\log\\left[\\bar{m}/m_0\\right]$"),
+       y = TeX("$\\bar{s} - R \\log\\left[\\bar{m}/m_0\right]$"),
        title = TeX("$\\bar{e}-T$ Plot US Economy"),
        subtitle = "1996-2019")
 ggsave("plots/e-T.pdf",
