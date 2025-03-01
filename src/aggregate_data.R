@@ -185,7 +185,7 @@ ggsave("plots/T-s.jpg",
 P_m_plot <- specEcon %>%
   ggplot(aes(x = M, y = P)) +
   geom_point(size = 1) +
-  geom_text(aes(label = year)) +
+  geom_text(aes(label = year),position = position_jitter(width = .1,height = .6, seed = 83234413)) +
   geom_line(data = specEcon, aes(x = M, y = P.fit), color = 'red') +
   labs(x = TeX("$\\bar{m}$ [k\\$/person]"),
        y = TeX("$P$ [GJ/k\\$]"),
